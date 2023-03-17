@@ -1,0 +1,214 @@
+https://github.com/DuyLeHong/css_example
+https://www.youtube.com/watch?v=7a7Y8SdXFIA
+
+SQL
+CREATE DATABASE Dungna_FPTShopV2;
+USE Dungna_FPTShopV2;
+
+
+DROP TABLE IF EXISTS DongSanPham;
+CREATE TABLE DongSanPham(
+ID INT PRIMARY KEY IDENTITY, 
+MaDSP VARCHAR(10),
+TenDSP NVARCHAR(50) DEFAULT NULL,
+IDTrangThai INT DEFAULT 0
+);
+
+ALTER TABLE NhanVien
+ADD CONSTRAINT FK_NhanVienChucVU
+FOREIGN KEY(IDChucVu) REFERENCES ChucVu(ID);
+
+DROP TABLE IF EXISTS HoaDonChiTiet;
+CREATE TABLE HoaDonChiTiet(
+IDHoaDon INT DEFAULT 0,
+IDSanPham INT DEFAULT 0,
+SoLuong int DEFAULT 0,
+DonGia DECIMAL(20,0) DEFAULT 0,
+PRIMARY KEY(IDHoaDon,IDSanPham),
+CONSTRAINT FK1 FOREIGN KEY(IDHoaDon)REFERENCES HoaDon(ID),
+CONSTRAINT FK2 FOREIGN KEY(IDSanPham) REFERENCES SanPHam(ID)
+);
+
+DELETE FROM CuaHang
+DBCC CHECKIDENT (CuaHang, RESEED, 0);
+INSERT INTO CuaHang(MaCH,TenCH,DiaChi,ThanhPho,QuocGia,IDTrangThai)
+VALUES('FPT1', N'FPT Cầu Giấy',N'Số 1 nguyễn văn huyên',N'Hà Nội',N'Việt Nam',1),
+('FPT2', N'FPT Nguyễn Phong Sắc',N'Số 50 nguyễn phong sắc',N'Hà Nội',N'Việt Nam',1),
+('FPT3', N'FPT Lạc Long Quân',N'Số 355 lạc long quân',N'Hà Nội',N'Việt Nam',1),
+('FPT4', N'FPT Hoàn Kiếm',N'Số 7 hàng bạc',N'Hà Nội',N'Việt Nam',1),
+('FPT5', N'FPT Đống Đa',N'Số 9 nguyễn lương bằng',N'Hà Nội',N'Việt Nam',1),
+('FPT6', N'FPT Tây Hồ',N'Số 99 Yên phụ',N'Hà Nội',N'Việt Nam',1),
+('FPT7', N'FPT Yên Phụ',N'Số 3 là nghi tàm',N'Hà Nội',N'Việt Nam',1);
+
+CREATE TABLE HoaDonChiTiet(
+IdHoaDon INT,
+IdChiTietSP INT,
+SoLuong INT,
+DonGia DECIMAL(20,0) DEFAULT 0,
+CONSTRAINT PK_HoaDonCT PRIMARY KEY (IdHoaDon,IdChiTietSP),
+CONSTRAINT FK1 FOREIGN KEY(IdHoaDon) REFERENCES HoaDon(Id),
+CONSTRAINT FK2 FOREIGN KEY(IdChiTietSP) REFERENCES ChiTietSP(Id),
+)
+
+-- FINAL ASSIGNMENT COM2012 DUNGNA29 --
+USE asm_final_web15314;
+/*
+1.0 Tạo ra 1 View báo cáo doanh số sản phẩm bao gồm các cột thông tin sau để báo cáo cho giám đốc của đại lý sấp xếp giảm dần theo Số lượng đã bán:
+[Mã Sản Phẩm] [Tên Sản Phẩm] [Mã Dòng Sản phẩm] [Tên Dòng Sản phẩm] [Số Lượng Tồn Kho] [Số Lượng Đã Bán] [Số tiền lãi] 
+-- sanpham - dongsanpham - hoadonchitiet */
+SELECT asm_final_web15314.sanpham.MaSanPHam AS 'Mã Sản Phẩm',
+	   asm_final_web15314.sanpham.TenSP AS 'Tên Sản Phẩm',
+       asm_final_web15314.dongsanpham.MaDongSanPham AS 'Tên Sản Phẩm',
+	   asm_final_web15314.dongsanpham.TenDongSanPham AS 'Tên Dòng Sản phẩm',
+       asm_final_web15314.sanpham.SoLuongSanPhamTon AS 'Số Lượng Tồn Kho',
+       SUM(asm_final_web15314.hoadonchitiet.SoLuongDatHang) AS 'Số Lượng Đã Bán', 
+       (asm_final_web15314.sanpham.GiaBanSP - asm_final_web15314.sanpham.GiaNhapSP) * SUM(asm_final_web15314.hoadonchitiet.SoLuongDatHang) AS 'Tiền Lãi'
+FROM hoadonchitiet
+JOIN sanpham ON asm_final_web15314.hoadonchitiet.IdSanPham = asm_final_web15314.sanpham.IdSanPham
+JOIN dongsanpham ON asm_final_web15314.sanpham.IdDongSanPham = asm_final_web15314.dongsanpham.IdDongSanPham
+GROUP BY hoadonchitiet.IdSanPham
+ORDER BY SUM(asm_final_web15314.hoadonchitiet.SoLuongDatHang) DESC;
+
+/* 1.1 Công ty quyết định khen thưởng cho tất cả các nhân viên bán được từ 3 sản phẩm trở lên sẽ tăng lương thêm 1.000.000 - Sử dụng câu lệnh cập nhật
+*/
+UPDATE asm_final_web15314.nhanvien
+SET asm_final_web15314.nhanvien.LuongNV = asm_final_web15314.nhanvien.LuongNV + 1
+WHERE asm_final_web15314.nhanvien.IdNhanVien IN (SELECT DISTINCT asm_final_web15314.hoadon.IdNhanVien
+												FROM asm_final_web15314.hoadon 
+                                                JOIN hoadonchitiet ON asm_final_web15314.hoadonchitiet.IdHoaDon = asm_final_web15314.hoadon.IdHoaDon                                                
+                                                GROUP BY asm_final_web15314.hoadonchitiet.IdHoaDon
+                                                HAVING SUM(asm_final_web15314.hoadonchitiet.SoLuongDatHang) > 3
+                                                );
+/*
+1.2 Tạo ra 1 View báo cáo cho thanh tra của tập đoàn xuống kiểm tra gồm những cột sau và sắp xếp theo tổng số lượng sản phẩm đã bán của nhân viên đó
+[Tên Cửa Hàng][Thành Phố][Địa Chỉ 1][Quốc Gia][Mã Nhân Viên] [Tên Nhân Viên] [Số điện thoại] [Lương] [Mã Người Báo Cáo] [Tên người Báo Cáo][Chức danh người báo cáo][Tổng số lượng sản phẩm đã bán của nhân viên đó]
+*/
+CREATE OR REPLACE VIEW view_baocaothanhtra AS 
+SELECT asm_final_web15314.cuahang_fpt.TenCH AS 'Tên Cửa Hàng',
+asm_final_web15314.cuahang_fpt.ThanhPho AS 'Thành Phố',
+asm_final_web15314.cuahang_fpt.DiaChi1 AS 'Địa Chỉ 1',
+asm_final_web15314.cuahang_fpt.QuocGia AS 'Quốc Gia',
+T1.MaNhanVien AS 'Mã Nhân Viên',
+T1.TenNV AS 'Tên Nhân Viên',
+T1.SoDienThoai AS 'Số Điện Thoại',
+T1.LuongNV AS 'Lương Nhân Viên',
+T1.IdGuiBaoCao AS 'Mã Người Báo Cáo',
+T2.TenNV AS 'Tên Người Báo Cáo',
+T2.IdChucVu AS 'Chức Danh Người Báo Cáo',
+SUM(hoadonchitiet.SoLuongDatHang) AS 'Số Lượng Đã Bán' 
+FROM nhanvien T1
+JOIN nhanvien T2 ON T2.IdNhanVien = T1.IdGuiBaoCao
+JOIN cuahang_fpt ON asm_final_web15314.cuahang_fpt.IdCuaHang = T1.IdCuaHang
+JOIN chucvu ON asm_final_web15314.chucvu.IdChucVu = T2.IdNhanVien
+JOIN hoadon ON T1.IdNhanVien = asm_final_web15314.hoadon.IdNhanVien
+JOIN hoadonchitiet ON hoadonchitiet.IdHoaDon = asm_final_web15314.hoadon.IdHoaDon
+GROUP BY hoadonchitiet.IdHoaDon;
+
+
+/*
+1.3 Sắp tới 30/4 mùng 1/5 đang có chương trình tặng quà cho những khách hàng từng mua hàng tổng đơn hàng từ 15 triệu trở lên. Hãy tạo 1 View hiển thị những khách hàng nằm trong diện được thưởng bao gồm các cột và sắp xếp theo tổng số tiền đã mua
+[Id Khách Hàng] [Họ và Tên Khách Hàng] [Số điện thoại] [Địa Chỉ 1] [Thành phố] [Tổng số lượng hà đã mua] [Tổng số tiền đã mua]
+*/ -- Nhóm Q ma giáo câu này
+CREATE OR REPLACE VIEW view_chuongtrinhquatang AS
+SELECT asm_final_web15314.khachhang.IdKhachHang AS 'ID khách hàng',
+       concat(asm_final_web15314.khachhang.TenHoKH,' ',asm_final_web15314.khachHang.TenDemKH,' ',asm_final_web15314.khachhang.TenKH) AS 'tên khách hàng',
+       asm_final_web15314.khachhang.SoDienThoai AS 'số điện thoại',
+	   asm_final_web15314.khachhang.DiaChi1 AS 'Địa chỉ 1',
+	   asm_final_web15314.khachhang.ThanhPho AS 'thành phố',
+	   SUM(hoadonchitiet.SoLuongDatHang)AS 'Tổng số lượng hàng đã mua',
+	   (asm_final_web15314.sanpham.GiaBanSP)*SUM(hoadonchitiet.SoLuongDatHang) AS 'Tổng Tiền Đã Mua'
+FROM hoadon
+JOIN hoadonchitiet ON hoadonchitiet.IdHoaDon=hoadon.IdHoaDon
+JOIN khachhang ON hoadon.IdKhachHang = khachhang.IdKhachhang
+JOIN sanpham ON hoadonchitiet.IdSanPham = sanpham.IdSanPham
+GROUP BY hoadon.IdKhachHang
+HAVING SUM(asm_final_web15314.sanpham.GiaBanSP)*SUM(hoadonchitiet.SoLuongDatHang) >= 15000000;
+
+SELECT * FROM view_chuongtrinhquatang
+WHERE 'Tổng Tiền Đã Mua' >=15000000;
+
+/*
+1.4 Hiển thị ra 1 View báo cáo Các hóa đơn có tình trạng chưa ship hàng cho khách được và để các trưởng phòng họp bắt các nhân viên giải trình hiển thị ra các cột như sau và sắp xếp giảm dần theo số lượng:
+[ID Hóa Đơn] [Mã Nhân Viên] [Tên Nhân Viên] [Ngày Lập Hóa Đơn] [Ngày Giao Hàng] [Tên Khách Hàng] [Số ĐT Khách Hàng] [Quận] [Trạng Thái Hóa ĐƠn] [Số Lượng trên đơn]
+*/-- Nhóm Q làm chưa chính xác câu này vì không GroupBy
+CREATE OR REPLACE VIEW view_baocaocachoadon AS
+SELECT asm_final_web15314.hoadon.IdHoaDon AS 'ID Hóa Đơn',
+asm_final_web15314.nhanvien.MaNhanVien AS 'Mã Nhân Viên',
+asm_final_web15314.nhanvien.TenNV AS 'Tên Nhân Viên',
+asm_final_web15314.hoadon.NgayTaoHoaDon AS 'Ngày Tọa Hóa Đơn',
+asm_final_web15314.hoadon.NgayShipHang AS 'Ngày Giao Hàng',
+asm_final_web15314.khachhang.TenKH AS 'Tên Khách Hàng',
+asm_final_web15314.khachhang.SoDienThoai AS 'Số Điện Thoại',
+asm_final_web15314.khachhang.ThanhPho AS 'Quận',
+asm_final_web15314.hoadon.TinhTrangHoaDon AS 'Chưa Ship Hàng',
+SUM(asm_final_web15314.hoadonchitiet.SoLuongDatHang) AS 'Số Lượng Trên Đơn'
+FROM hoadon
+JOIN nhanvien ON asm_final_web15314.nhanvien.IdNhanVien=asm_final_web15314.hoadon.IdNhanVien
+JOIN khachhang ON asm_final_web15314.khachhang.IdKhachHang=asm_final_web15314.hoadon.IdKhachHang
+JOIN hoadonchitiet ON asm_final_web15314.hoadon.IdHoaDon=asm_final_web15314.hoadonchitiet.IdHoaDon
+GROUP BY asm_final_web15314.hoadonchitiet.IdHoaDon
+HAVING asm_final_web15314.hoadon.NgayShipHang IS NULL;
+
+/*
+1.5 Hiển thị ra 1 View báo cáo các sản phẩm không bán chạy để phòng marketing tiến hành các chiến lược đẩy mạnh doanh số và sắp xếp theo thứ tự tăng dần theo cột số lượng đã bán:
+[Tên Dòng sản phẩm] [Website] [Mã Dòng Sản phẩm] [Tên Sản Phẩm] [Giá Nhâm] [Mô Tả] [Trọng Lượng] [Số lượng Tồm Kho] [Số lượng đã bán]
+*/ -- Nhóm Huy Quyết làm câu này chưa chính xác vì không group
+CREATE OR REPLACE VIEW view_baocaosanphamkobanchay AS
+SELECT asm_final_web15314.dongsanpham.TenDongSanPham AS 'Tên Dòng Sản Phẩm',
+      asm_final_web15314.dongsanpham.WebsiteDongSanPham AS 'Website',
+      asm_final_web15314.dongsanpham.MaDongSanPham AS 'Mã Dòng Sản Phẩm',
+      asm_final_web15314.sanpham.TenSP AS 'Tên Sản Phẩm',
+      asm_final_web15314.sanpham.MaSanPHam AS 'Mã Sản Phẩm',
+      asm_final_web15314.sanpham.GiaNhapSP AS 'Giá Nhập',
+      asm_final_web15314.sanpham.MoTaSP AS 'Mô Tả',
+      asm_final_web15314.sanpham.TrongLuongSP AS 'Trọng Lượng Sản Phẩm',
+      asm_final_web15314.sanpham.SoLuongSanPhamTon AS 'Số Lượng Tồn Kho',	        
+      SUM(asm_final_web15314.hoadonchitiet.SoLuongDatHang) AS 'Số Lượng Đã Bán'    
+      FROM asm_final_web15314.hoadonchitiet
+      JOIN sanpham ON asm_final_web15314.hoadonchitiet.IdSanPham = asm_final_web15314.sanpham.IdSanPham
+	  JOIN dongsanpham ON asm_final_web15314.sanpham.IdDongSanPham = asm_final_web15314.dongsanpham.IdDongSanPham
+      GROUP BY asm_final_web15314.hoadonchitiet.IdSanPham
+      ORDER BY SUM(asm_final_web15314.hoadonchitiet.SoLuongDatHang);
+      
+/*
+1.6 Liệt kê các nhân viên có chức danh không phải nhân viên mà là từ phó phòng trở lên để gửi email họp toàn quốc vào mùa đại dịch Covid gồm các cột sau:
+[Mã Nhân Viên] [Tên Nhân Viên] [Tên Chức Danh] [Email] [Số điện thoại] [Tên Cửa Hàng] [Thành phố] [Địa Chỉ 1 Cửa Hàng]
+*/
+SELECT nhanvien.MaNhanVien AS 'Mã Nhân Viên ',
+concat(nhanvien.TenHoNV ,' ',nhanvien.TenDemNV,' ',nhanvien.TenNV) AS 'Tên Nhân Viên ',
+chucvu.TenChucVu AS 'Tên Chức Vụ ',
+nhanvien.Email ,
+nhanvien.SoDienThoai AS 'Số Điện Thoại',
+cuahang_fpt.TenCH AS 'Tên Cửa Hàng ',
+cuahang_fpt.ThanhPho AS 'Thành Phố ',
+cuahang_fpt.DiaChi1 AS 'Địa Chỉ 1'
+FROM nhanvien
+JOIN chucvu ON nhanvien.IdChucVu = chucvu.IdChucVu
+JOIN cuahang_fpt ON nhanvien.IdCuaHang = cuahang_fpt.IdCuaHang
+WHERE chucvu.TenChucVu !='Nhân Viên';
+/*
+1.7 Tạo ra một View báo cáo tình trạng các hóa đơn còn chậm chưa giao cho khách và hiển thị ra cột số ngày chậm so với ngày dự kiến và gồm các cột sau:
+[ID Hóa Đơn] [Mã Nhân Viên] [Tên Nhân Viên] [Ngày Lập Hóa Đơn] [Ngày Giao Hàng] [Số Ngày Chậm] [Tên Khách Hàng] [Số ĐT Khách Hàng][Tên Cửa Hàng]
+*/
+SELECT hoadon.IdHoaDon AS 'ID Hóa Đơn',
+nhanvien.MaNhanVien AS 'Mã Nhân Viên',
+concat(nhanvien.TenHoNV,' ',nhanvien.TenDemNV,' ',nhanvien.TenNV) AS 'Tên nhân viên ',
+hoadon.NgayTaoHoaDon AS 'Ngày tạo hóa đơn ',
+hoadon.NgayShipHang AS 'Ngày giao hàng ',
+datediff((now()),hoadon.NgayShipHang) AS 'Số ngày chậm ', -- Bài Quyết sai chỗ này ko cần phải đi select như thế sẽ ko in được nếu có 2 thằng tình trạng 0
+concat(khachhang.TenHoKH,' ',khachhang.TenDemKH,' ',khachhang.TenKH) AS 'Tên khách hàng ',
+khachhang.SoDienThoai AS 'Số điện thoại của khách hàng',
+cuahang_fpt.TenCH AS 'Tên cửa hàng '
+FROM hoadon
+JOIN nhanvien ON hoadon.IdNhanVien = nhanvien.IdNhanVien
+JOIN khachhang ON hoadon.IdKhachHang = khachhang.IdKhachHang
+JOIN cuahang_fpt ON nhanvien.IdCuaHang = cuahang_fpt.IdCuaHang
+WHERE hoadon.TinhTrangHoaDon = 0;
+
+
+USE asm_final_web15314;
+-- 1 File Word Phân tích cơ sở dữ liệu 
+-- 2 File Tạo cơ sở dữ liệu bao gồm code tạo bảng, tạo quan hệ, tạo dữ liệu đuôi.sql
+-- 3 File truy vấn cơ sở dữ liệu
+-- 4 File ERD của CSDL đuôi mwb
+-- 9h sáng ngày mùng 1/5/2020 giảng lại 1 số chỗ về CSDL
